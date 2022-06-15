@@ -113,93 +113,138 @@ exports.resetPassword = catchAsyncError(async (req, res, next) => {
 		resetPasswordExpire: { $gt: Date.now() },
 	});
 
-    if(!user){
-        return next(new ErrorHandler("Reset password token is invalid or has been expired", 404));
-    }
-    if(req.body.password !== req.body.confirmPassword){
-        return next(new ErrorHandler('Password does not match',400));
-    }
+	if (!user) {
+		return next(
+			new ErrorHandler(
+				"Reset password token is invalid or has been expired",
+				404
+			)
+		);
+	}
+	if (req.body.password !== req.body.confirmPassword) {
+		return next(new ErrorHandler("Password does not match", 400));
+	}
 
-    user.password = req.body.password;
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpire = undefined;
+	user.password = req.body.password;
+	user.resetPasswordToken = undefined;
+	user.resetPasswordExpire = undefined;
 
-    await user.save();
-    sendToken(user,200,res);
+	await user.save();
+	sendToken(user, 200, res);
 });
 
-// Get User Details 
+// Get User Details
 
 exports.getUserDetails = catchAsyncError(async (req, res, next) => {
 	const user = await User.findById(req.user.id);
 	res.status(200).json({
-		success:true,
-		user
-	})
-})
+		success: true,
+		user,
+	});
+});
 
 // Update user password
 
-exports.updatePassword = catchAsyncError(async (req, res, next) =>{
+exports.updatePassword = catchAsyncError(async (req, res, next) => {
 	const user = await User.findById(req.user.id).select("+password");
 
 	const isPasswordMatched = await user.comparePassword(req.body.oldPassword);
 
-	if(!isPasswordMatched){
-		return next(new ErrorHandler("Old Password does not match",400));
+	if (!isPasswordMatched) {
+		return next(new ErrorHandler("Old Password does not match", 400));
 	}
 
-	if(req.body.newPassword !== req.body.confirmPassword){
-		return next(new ErrorHandler("Password does not match",400));
+	if (req.body.newPassword !== req.body.confirmPassword) {
+		return next(new ErrorHandler("Password does not match", 400));
 	}
 
 	user.password = req.body.newPassword;
 	await user.save();
 
-	sendToken(user,200,res);
-})
+	sendToken(user, 200, res);
+});
 
 // Updated user profile
 
 exports.updateProfile = catchAsyncError(async (req, res, next) => {
 	const newUserData = {
-		name:req.body.name,
-		email:req.body.email,
-	}
+		name: req.body.name,
+		email: req.body.email,
+	};
 	// Image will be added cloudinary letter
 
-	const user = await User.findByIdAndUpdate(req.user.id, newUserData,{
-		new:true,
-		runValidators:true,
-		useFindAdnModify:false
-	})
+	const user = await User.findByIdAndUpdate(req.user.id, newUserData, {
+		new: true,
+		runValidators: true,
+		useFindAdnModify: false,
+	});
 
 	res.status(200).json({
-		success:true
-	})
-
-})
+		success: true,
+	});
+});
 
 //For Admin --> Get all users
 exports.getAllUser = catchAsyncError(async (req, res, next) => {
 	const users = await User.find();
 	res.status(200).json({
-		success:true,
-		users
-	})
+		success: true,
+		users,
+	});
 });
 
 //For Admins --> get single users for admin
 
-exports.getSingleUser = catchAsyncError(async (req, res, next) =>{
+exports.getSingleUser = catchAsyncError(async (req, res, next) => {
 	const user = await User.findById(req.params.id);
 
-	if(!user){
-		return next(new ErrorHandler(`Your Requested your is no found id-${req.params.id}`))
+	if (!user) {
+		return next(
+			new ErrorHandler(`User not found for this id-${req.params.id}`)
+		);
 	}
 
 	res.status(200).json({
-		success:true,
-		user
-	})
-})
+		success: true,
+		user,
+	});
+});
+
+//Update User Role
+
+exports.updateUserRole = catchAsyncError(async (req, res, next) => {
+	const newUserData = {
+		name: req.body.name,
+		email: req.body.email,
+		role: req.body.role,
+	};
+	// Image update will be letter
+	const user = await User.findByIdAndUpdate(req.params.id, newUserData, {
+		new: true,
+		runValidators: true,
+		useFindAdnModify: false,
+	});
+
+	if (!user) {
+		return next(
+			new ErrorHandler(`User does not exit with id:${req.params.id}`)
+		);
+	}
+
+	res.status(200).json({
+		success: true,
+	});
+});
+
+exports.deleteUser = catchAsyncError(async (req, res, next) => {
+	const user = await User.findById(req.params.id);
+	if (!user) {
+		return next(
+			new ErrorHandler(`User does not exit with id:${req.params.id}`)
+		);
+	}
+
+	await user.remove();
+
+	res.status(200).json({ success: true, message: "User deleted successfully" });
+});
